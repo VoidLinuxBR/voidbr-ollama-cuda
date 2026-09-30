@@ -1,58 +1,59 @@
 # Maintainer: Vilmar Catafesta <vcatafesta@gmail.com>
+#
+# Bibliotecas CUDA do Ollama (aceleração em placas NVIDIA), separadas do
+# voidbr-ollama para quem não tem NVIDIA não instalar ~2 GB à toa.
+#
+# Vem do MESMO tarball oficial do voidbr-ollama e instala só:
+#   lib/ollama/cuda_v12  (1285 MB)  -> /usr/lib/ollama/cuda_v12
+#   lib/ollama/cuda_v13   (851 MB)  -> /usr/lib/ollama/cuda_v13
+# O ollama escolhe a versão conforme o driver NVIDIA instalado.
+#
+# ATENÇÃO: atualize sempre junto com o voidbr-ollama (mesmo pkgver): as
+# bibliotecas precisam ser da mesma versão do binário.
 
-pkgname=voidbr-pkgname
-pkgdesc="Package template for VoidLinuxBR"
-pkgver=$(date +%Y%m%d)
-pkgrel=$(date +%H%M)
-provides=()               # "eu SOU o $pkgname pkg1, pra quem depender deles"
-replaces=()               # "remove o pkg1 pkg2 antigo automaticamente quando eu instalar"
-conflicts=()              # "nunca me deixe coexistir com o pkg1 pkg2 original"
-arch=('any')
+pkgname=voidbr-ollama-cuda
+pkgver=0.35.0
+pkgrel=1
+pkgdesc="Ollama - bibliotecas CUDA para aceleração em placas NVIDIA"
+arch=(x86_64 aarch64)
 license=('MIT')
-#url="ssh://git@github.com/voidlinuxbr/${pkgname}"
-url="https://github.com/voidlinuxbr/${pkgname}"
-source=("git+${url}.git")
-md5sums=('SKIP')
-makedepends=()
-depends=()
-backup=()
+url="https://github.com/ollama/ollama"
+options=('!strip')
+depends=("voidbr-ollama>=${pkgver}_1")
+makedepends=(zstd)
 
-# Automatically detect and use the correct install file
-if [ -e "${pkgname}.install" ]; then
-	install=${pkgname}.install
-elif [ -e "pkgbuild.install" ]; then
-	install=pkgfile.install
-fi
+case "$(uname -m)" in
+aarch64)
+	_arch=arm64
+	_sha256='cb627d332b1fe5055bd5485ca10d595da8429e447648209e375390ec3bd09374'
+	;;
+*)
+	_arch=amd64
+	_sha256='1c114a6b220c5efca2ef2b1e5f01d1e535e26f6cd6d1678c8489325d2835e525'
+	;;
+esac
+_tarball="ollama-linux-${_arch}.tar.zst"
+source=("https://github.com/ollama/ollama/releases/download/v${pkgver}/${_tarball}")
+md5sums=('SKIP')   # conferido com sha256 (sha256sum.txt do release) no package()
 
 package() {
-	# Verify default folder
-  if [ -d "${srcdir}/${pkgname}/${pkgname}" ]; then
-		InternalDir="${srcdir}/${pkgname}/${pkgname}"
-  elif [ -d "${srcdir}/${pkgname}" ]; then
-		InternalDir="${srcdir}/${pkgname}"
-	else
-    #local
-		InternalDir="${WORKDIR}"
+	cd "${srcdir}"
+
+	if [ -f "${_tarball}" ]; then
+		echo "${_sha256}  ${_tarball}" | sha256sum -c - || {
+			msg "sha256 do ${_tarball} não confere"
+			return 1
+		}
 	fi
 
-	cd "${InternalDir}"
-	# Copiar a estrutura de /etc, /usr e /opt para /
-	local dirs=("boot" "etc" "opt" "usr" "var")
-	for dir in "${dirs[@]}"; do
-		if [ -d "${InternalDir}/${dir}" ]; then
-			cp -a "${InternalDir}/${dir}" "${pkgdir}/"
-		fi
+	local d n=0
+	install -d "${pkgdir}/usr/lib/ollama"
+	for d in lib/ollama/cuda_v*; do
+		[ -d "$d" ] || continue
+		cp -a "$d" "${pkgdir}/usr/lib/ollama/"
+		n=$((n + 1))
 	done
-
-	# Install license file if present
-	if [ -f "LICENSE" ]; then
-		install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-	fi
-
-	# Install documentation if present
-	if [ -f "README.md" ]; then
-		install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-	fi
+	((n)) || { msg "nenhuma pasta cuda_v* no tarball"; return 1; }
 }
 
 pre_install() {
@@ -61,6 +62,9 @@ pre_install() {
 
 post_install() {
 	log "Finalizando instalação"
+	echo "==> voidbr-ollama-cuda instalado."
+	echo "    Precisa do driver proprietário da NVIDIA (pacote nvidia)."
+	echo "    Se o serviço já estava rodando: sudo sv restart ollama"
 }
 
 pre_upgrade() {
@@ -69,4 +73,5 @@ pre_upgrade() {
 
 post_upgrade() {
 	log "Finalizando upgrade"
+	echo "==> voidbr-ollama-cuda atualizado: sudo sv restart ollama"
 }
