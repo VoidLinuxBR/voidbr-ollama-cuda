@@ -12,7 +12,7 @@
 # bibliotecas precisam ser da mesma versão do binário.
 
 pkgname=voidbr-ollama-cuda
-pkgver=0.35.0
+pkgver=0.40.16
 pkgrel=1
 pkgdesc="Ollama - bibliotecas CUDA para aceleração em placas NVIDIA"
 arch=(x86_64 aarch64)
@@ -29,7 +29,7 @@ aarch64)
 	;;
 *)
 	_arch=amd64
-	_sha256='1c114a6b220c5efca2ef2b1e5f01d1e535e26f6cd6d1678c8489325d2835e525'
+	_sha256='87bfafb2acbc89b2e6a1be0a9043de6aa75fb450696f86bc426e65fc448f788d'
 	;;
 esac
 _tarball="ollama-linux-${_arch}.tar.zst"
